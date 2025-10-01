@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Button, Text, View, useColorScheme } from 'react-native';
+import { Button, ScrollView, Text, View, useColorScheme } from 'react-native';
 import OBD2Client from '../services/OBD2Client';
 
 export default function DiagInfoScreen() {
@@ -19,11 +19,13 @@ export default function DiagInfoScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Diagnostic Info</Text>
-      <Button title="Read VIN" onPress={readVIN} />
-      <Text style={{ marginTop: 16, color: colors.text }}>VIN: {vin || '—'}</Text>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+        <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Diagnostic Info</Text>
+        <Button title="Read VIN" onPress={readVIN} />
+        <Text style={{ marginTop: 16, color: colors.text }}>VIN: {vin || '—'}</Text>
+      </ScrollView>
     </View>
   );
 }

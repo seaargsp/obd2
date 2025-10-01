@@ -27,6 +27,13 @@ class BluetoothAdapter extends SimpleEventEmitter<AdapterEvents> {
     return this.state;
   }
 
+  getConnectedDevice(): { address: string; name?: string } | null {
+    if (this.state === 'connected' && this.device?.address) {
+      return { address: this.device.address, name: this.device.name };
+    }
+    return null;
+  }
+
   async ensurePermissions() {
     if (Platform.OS !== 'android') return true;
     const sdk = Platform.Version as number;

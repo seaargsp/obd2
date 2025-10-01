@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Button, Text, View, useColorScheme } from 'react-native';
+import { Button, ScrollView, Text, View, useColorScheme } from 'react-native';
 import OBD2Client from '../services/OBD2Client';
 
 export default function DTCScreen() {
@@ -37,14 +37,16 @@ export default function DTCScreen() {
   const clear = async () => { setBusy(true); try { await client.clearDTCs(); setCodes(''); } finally { setBusy(false); } };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Diagnostic Trouble Codes</Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Button title={busy ? 'Working…' : 'Read DTCs'} onPress={read} disabled={busy || !connected} />
-        <Button title="Clear DTCs" onPress={clear} disabled={busy || !connected} />
-      </View>
-      <Text style={{ marginTop: 16, color: colors.text }}>{connected ? (codes || 'No codes') : 'Connect to a device to read codes.'}</Text>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+        <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Diagnostic Trouble Codes</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Button title={busy ? 'Working…' : 'Read DTCs'} onPress={read} disabled={busy || !connected} />
+          <Button title="Clear DTCs" onPress={clear} disabled={busy || !connected} />
+        </View>
+        <Text style={{ marginTop: 16, color: colors.text }}>{connected ? (codes || 'No codes') : 'Connect to a device to read codes.'}</Text>
+      </ScrollView>
     </View>
   );
 }

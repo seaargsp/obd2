@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View, useColorScheme } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View, useColorScheme } from 'react-native';
 import { DEFAULT_PID_GROUPS, PID_DEFINITIONS } from '../data/pidDefinitions';
 import LiveDataManager from '../services/LiveDataManager';
 import OBD2Client from '../services/OBD2Client';
+import { formatPidValue } from '../utils/format';
 
 export default function DashboardScreen() {
   const scheme = useColorScheme();
@@ -23,6 +24,12 @@ export default function DashboardScreen() {
   const [supported01, setSupported01] = useState<number[]>([]);
   const [connected, setConnected] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  const renderValue = useMemo(() => {
+    return (def: (typeof PID_DEFINITIONS)[number] | undefined, val: any): { text: string; unit: string } => {
+      return formatPidValue(val, def);
+    };
+  }, []);
 
   useEffect(() => {
     const off = live.on('sample', (s) => setValues((v) => ({ ...v, [s.key]: s.value })));
@@ -45,66 +52,71 @@ export default function DashboardScreen() {
   const stop = () => { live.stop(); setRunning(false); };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Dashboard</Text>
-      {!!statusMsg && (
-        <Text style={{ color: colors.text, marginBottom: 8 }}>{statusMsg}</Text>
-      )}
-      <View style={{ width: '100%', flexDirection: 'column', gap: 16 }}>
-        {!running ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={start}
-            style={{
-              width: '100%',
-              borderRadius: 10,
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingVertical: 24, // ~2x default height
-            }}
-            disabled={!connected}
-          >
-            <Text style={{ color: colors.primaryText, fontSize: 18, fontWeight: '600', opacity: connected ? 1 : 0.6 }}>{connected ? 'Start' : 'Connect a device to start'}</Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={stop}
-            style={{
-              width: '100%',
-              borderRadius: 10,
-              backgroundColor: '#E53935',
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingVertical: 24,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}>Stop</Text>
-          </Pressable>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+        <Text style={{ fontSize: 20, marginBottom: 8, color: colors.text }}>Dashboard</Text>
+        {!!statusMsg && (
+          <Text style={{ color: colors.text, marginBottom: 8 }}>{statusMsg}</Text>
         )}
-      </View>
-      {DEFAULT_PID_GROUPS.map(group => (
-        <View key={group.id} style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{group.title}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {group.pids
-              .filter(p => p.mode !== 0x01 || supported01.length === 0 || supported01.includes(p.pid))
-              .map(p => {
-              const key = `${p.mode}:${p.pid}`;
-              const val = values[key];
-              const def = PID_DEFINITIONS.find(d => d.mode === p.mode && d.pid === p.pid);
-              return (
-                <View key={key} style={{ width: '48%', margin: '1%', padding: 12, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, backgroundColor: colors.cardBg }}>
-                  <Text style={{ fontWeight: '600', color: colors.text }}>{def?.name || key}</Text>
-                  <Text style={{ fontSize: 24, color: colors.text }}>{String(val ?? '—')} {def?.unit || ''}</Text>
-                </View>
-              );
-            })}
-          </View>
+        <View style={{ width: '100%', flexDirection: 'column', gap: 16 }}>
+          {!running ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={start}
+              style={{
+                width: '100%',
+                borderRadius: 10,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 24, // ~2x default height
+              }}
+              disabled={!connected}
+            >
+              <Text style={{ color: colors.primaryText, fontSize: 18, fontWeight: '600', opacity: connected ? 1 : 0.6 }}>{connected ? 'Start' : 'Connect a device to start'}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              onPress={stop}
+              style={{
+                width: '100%',
+                borderRadius: 10,
+                backgroundColor: '#E53935',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 24,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}>Stop</Text>
+            </Pressable>
+          )}
         </View>
-      ))}
+        {DEFAULT_PID_GROUPS.map(group => (
+          <View key={group.id} style={{ marginTop: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{group.title}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {group.pids
+                .filter(p => p.mode !== 0x01 || supported01.length === 0 || supported01.includes(p.pid))
+                .map(p => {
+                const key = `${p.mode}:${p.pid}`;
+                const val = values[key];
+                const def = PID_DEFINITIONS.find(d => d.mode === p.mode && d.pid === p.pid);
+                const { text: formatted, unit } = renderValue(def, val);
+                return (
+                  <View key={key} style={{ width: '48%', margin: '1%', padding: 12, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, backgroundColor: colors.cardBg }}>
+                    <Text style={{ fontWeight: '600', color: colors.text }}>{def?.name || key}</Text>
+                    <Text style={{ fontSize: 20, color: colors.text }}>
+                      {formatted}{unit ? ` ${unit}` : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }

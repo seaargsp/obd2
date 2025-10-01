@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, FlatList, ScrollView, Text, View, useColorScheme } from 'react-native';
@@ -45,10 +46,12 @@ export default function DeviceListScreen() {
     const offConnected = bt.on('connected', d => {
       setConnectedAddr(d.address);
       appendLog(`[BT] connected: ${d.name ?? d.address}`);
+      bt.listDevices();
     });
     const offDisconnected = bt.on('disconnected', d => {
       appendLog(`[BT] disconnected: ${d?.address ?? ''}`);
       setConnectedAddr(null);
+      bt.listDevices();
     });
     const offData = bt.on('data', (raw: string) => {
       // Raw ELM327 lines including '>' prompt; trim noisy CRLFs for readability
@@ -57,7 +60,10 @@ export default function DeviceListScreen() {
     });
     const offError = bt.on('error', e => appendLog(`[ERR] ${e.message}`));
 
-    bt.ensurePermissions().then(() => bt.listDevices());
+  // Initialize from current adapter state
+  const current = bt.getConnectedDevice();
+  if (current?.address) setConnectedAddr(current.address);
+  bt.ensurePermissions().then(() => bt.listDevices());
 
     return () => {
       offList();
@@ -68,6 +74,15 @@ export default function DeviceListScreen() {
       offError();
     };
   }, [bt]);
+
+  // When screen regains focus, refresh state in case user navigated away and back
+  useFocusEffect(React.useCallback(() => {
+    setState(bt.connectionState);
+    const current = bt.getConnectedDevice();
+    setConnectedAddr(current?.address ?? null);
+    bt.listDevices();
+    return () => {};
+  }, [bt]));
 
   useEffect(() => {
     if (debugVisible && scrollRef.current) {
@@ -99,9 +114,10 @@ export default function DeviceListScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => {
-    const isConnectedGlobal = state === 'connected';
-    const isThisConnected = isConnectedGlobal && connectedAddr === item.address;
-    const disableOther = isConnectedGlobal && !isThisConnected;
+  const isConnectedGlobal = state === 'connected';
+  const isThisConnected = isConnectedGlobal && connectedAddr === item.address;
+  // Only dim rows that are not the currently connected one
+  const disableOther = isConnectedGlobal && !isThisConnected;
 
     // While connecting, disable all other rows except the one being connected
     const isThisConnecting = connecting === item.address;
@@ -126,7 +142,7 @@ export default function DeviceListScreen() {
         {isThisConnected ? (
           <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={{ color: colors.sub }}>Connected</Text>
-            <Button title="Disconnect" onPress={disconnect} />
+            <Button title="Disconnect" onPress={disconnect} disabled={false} />
           </View>
         ) : (
           <View style={{ marginTop: 6 }}>
