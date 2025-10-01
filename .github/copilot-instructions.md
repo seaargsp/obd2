@@ -67,3 +67,66 @@ Troubleshooting
 - If no data appears: ensure permissions are granted, device is connected, and streaming is started on Dashboard.
 - If some PIDs don’t show: they may be unsupported; check `client.getSupported(0x01)` or listen for `supported:update`.
 
+## ELM327 Communications
+
+Communicating with the ELM327
+All of the responses from the ELM327 are terminated with
+a single carriage return character and, optionally, a
+linefeed character (depending on your settings).
+Properly connected and powered, the ELM327 will
+energize the four LED outputs in sequence (as a lamp
+test) and will then send the message:
+```
+ELM327 v2.0
+>
+```
+In addition to identifying the version of this IC,
+receiving this string is a good way to confirm that the
+computer connections and terminal software settings are correct 
+(however, at this point no communications
+have taken place with the vehicle, so the state of that
+connection is still unknown).
+The ‘>’ character that is shown on the second line
+is the ELM327’s prompt character. It indicates that the
+device is in the idle state, ready to receive characters
+on the RS232 port. If you did not see the identification
+string, you might try resetting the IC again with the AT
+Z (reset) command. Simply type the letters A T and Z
+(spaces are optional), then press the return key:
+>AT Z
+That should cause the leds to flash again, and the
+identification string to be printed. If you see strange
+looking characters, then check your baud rate - you
+have likely set it incorrectly.
+Characters sent from the computer can either be
+intended for the ELM327’s internal use, or for
+reformatting and passing on to the vehicle. The
+ELM327 can quickly determine where the received
+characters are to be directed by monitoring the
+contents of the message. Commands that are
+intended for the ELM327’s internal use will begin with
+the characters ‘AT’, while OBD commands for the
+vehicle are only allowed to contain the ASCII codes for
+hexadecimal digits (0 to 9 and A to F).
+Whether it is an ‘AT’ type internal command or a
+hex string for the OBD bus, all messages to the
+ELM327 must be terminated with a carriage return
+character (hex ‘0D’) before it will be acted upon. The
+one exception is when an incomplete string is sent and
+no carriage return appears. In this case, an internal
+timer will automatically abort the incomplete message
+after about 20 seconds, and the ELM327 will print a
+single question mark (‘?’) to show that the input was
+not understood (and was not acted upon).
+Messages that are not understood by the ELM327
+(syntax errors) will always be signalled by a single
+question mark. These include incomplete messages,
+incorrect AT commands, or invalid hexadecimal digit
+strings, but are not an indication of whether or not the
+message was understood by the vehicle. One must
+keep in mind that the ELM327 is a protocol interpreter
+that makes no attempt to assess the OBD messages
+for validity – it only ensures that hexadecimal digits
+were received, combined into bytes, then sent out the
+OBD port, and it does not know if a message sent to
+the vehicle was in error.
