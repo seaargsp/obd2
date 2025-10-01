@@ -19,10 +19,24 @@ class OBD2Client extends SimpleEventEmitter<ClientEvents> {
   private queue: { cmd: string; resolve: (r: OBD2Response) => void; reject: (e: any) => void; timeout: any; parser: (raw: string) => OBD2Response }[] = [];
   private busy = false;
   private supported = new Map<OBDMode, Set<number>>();
+  private initialized = false;
 
   private constructor() {
     super();
     this.bt.on('data', (chunk: string) => this.onData(chunk));
+    // Bridge underlying BT events
+    this.bt.on('connected', async () => {
+      try {
+        if (!this.initialized) {
+          await this.initializeELM327();
+          await this.refreshSupportedPIDs(0x01);
+          this.initialized = true;
+        }
+        this.emit('connected', true);
+      } catch (e: any) {
+        this.emit('error', { message: e?.message ?? 'Initialization failed' });
+      }
+    });
     this.bt.on('disconnected', () => {
       this.onDisconnected();
       this.emit('disconnected', true);
@@ -41,6 +55,7 @@ class OBD2Client extends SimpleEventEmitter<ClientEvents> {
     if (!connected) throw new Error('Bluetooth connect failed');
     await this.initializeELM327();
     await this.refreshSupportedPIDs(0x01);
+    this.initialized = true;
     this.emit('connected', true);
   }
 
@@ -132,6 +147,7 @@ class OBD2Client extends SimpleEventEmitter<ClientEvents> {
     }
     this.busy = false;
     this.buffer = '';
+    this.initialized = false;
   }
 
   // Supported PID detection for Mode 01 based on SAE J1979 bitmasks
@@ -177,6 +193,10 @@ class OBD2Client extends SimpleEventEmitter<ClientEvents> {
 
   getSupported(mode: OBDMode): number[] {
     return Array.from(this.supported.get(mode) ?? []);
+  }
+
+  isConnected(): boolean {
+    return this.bt.connectionState === 'connected';
   }
 
   // High-level OBD helpers

@@ -18,6 +18,8 @@ export default function DTCScreen() {
   React.useEffect(() => {
     const offC = client.on('connected', () => setConnected(true));
     const offD = client.on('disconnected', () => setConnected(false));
+    // Initialize from current state
+    setConnected(client.isConnected());
     return () => { offC(); offD(); };
   }, [client]);
 

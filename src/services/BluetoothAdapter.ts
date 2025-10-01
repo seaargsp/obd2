@@ -47,14 +47,15 @@ class BluetoothAdapter extends SimpleEventEmitter<AdapterEvents> {
     if (this.state === 'connected' && this.device?.address === address) return true;
     this.setState('connecting');
     try {
-  // ELM327 terminates lines with CR LF and prompt '>'
-  const device = await RNBluetoothClassic.connectToDevice(address, { delimiter: '\\r\\n', charset: 'ascii' });
+  // Use '>' as the delimiter so each onDataReceived contains a full ELM327 response.
+  // We will re-append '>' when emitting so downstream parsing can detect prompt boundaries.
+  const device = await RNBluetoothClassic.connectToDevice(address, { delimiter: '>', charset: 'ascii' });
       this.device = device;
       this.setState('connected');
       this.emit('connected', { address: device.address, name: device.name ?? device.address, connected: true });
       // Subscribe to data
       this.readerSub = device.onDataReceived((event: any) => {
-        if (event?.data) this.emit('data', String(event.data));
+        if (event?.data) this.emit('data', String(event.data) + '>');
       });
       return true;
     } catch (e: any) {

@@ -33,8 +33,9 @@ export default function DashboardScreen() {
     });
     const offC = client.on('connected', () => { setConnected(true); setStatusMsg(null); });
     const offD = client.on('disconnected', () => { setConnected(false); setStatusMsg('Waiting for connection…'); setRunning(false); });
-    // initial: if already connected and cached, set now
+  // initial: if already connected and cached, set now
     setSupported01(client.getSupported(0x01));
+  setConnected(client.isConnected());
     // subscribe defaults (LiveDataManager will drop unsupported when known)
     DEFAULT_PID_GROUPS.forEach(g => g.pids.forEach(p => live.subscribe(p.mode, p.pid)));
     return () => { off(); offE(); offSup(); offC(); offD(); live.stop(); };
